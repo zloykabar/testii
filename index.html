@@ -3,40 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой ИИ-Помощник</title>
+    <title>Мой ИИ-Помощник с Puter.js</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f0f2f5; }
-        #chat { background: white; border-radius: 8px; padding: 1rem; height: 400px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid #ddd; }
-        .msg { margin-bottom: 0.75rem; padding: 0.5rem 1rem; border-radius: 12px; max-width: 80%; }
-        .user { background: #007bff; color: white; margin-left: auto; }
-        .ai { background: #e9ecef; color: black; }
-        #input-area { display: flex; gap: 0.5rem; }
-        #prompt { flex: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
-        button { padding: 0.75rem 1.5rem; border: none; background: #007bff; color: white; border-radius: 8px; cursor: pointer; font-size: 1rem; }
-        button:disabled { background: #6c757d; }
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f4f6f8; color: #1a1a1a; }
+        h2 { display: flex; align-items: center; gap: 0.5rem; }
+        #chat { background: white; border-radius: 12px; padding: 1.25rem; height: 450px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .msg { margin-bottom: 0.75rem; padding: 0.6rem 1rem; border-radius: 14px; max-width: 85%; line-height: 1.5; word-wrap: break-word; }
+        .user { background: #007bff; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
+        .ai { background: #f0f2f5; color: #1a1a1a; border-bottom-left-radius: 4px; }
+        .ai.error { background: #fee; color: #c00; }
+        #input-area { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+        #prompt { flex: 1; padding: 0.75rem 1rem; border: 1px solid #ccc; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.2s; }
+        #prompt:focus { border-color: #007bff; }
+        button { padding: 0.75rem 1.5rem; border: none; background: #007bff; color: white; border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background 0.2s; }
+        button:hover:not(:disabled) { background: #0056b3; }
+        button:disabled { background: #a0c4e8; cursor: not-allowed; }
+        #options { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: #555; }
+        #options label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
     </style>
 </head>
 <body>
     <h2>🤖 Мой ИИ-Помощник</h2>
-    <div id="chat"></div>
+    
+    <div id="chat">
+        <div class="msg ai">Привет! Я твой ИИ-помощник. Спроси меня о чём угодно. Можешь включить веб-поиск, чтобы я мог найти актуальную информацию в интернете.</div>
+    </div>
+
     <div id="input-area">
         <input type="text" id="prompt" placeholder="Задайте вопрос..." autocomplete="off">
         <button id="send" onclick="askAI()">Отправить</button>
     </div>
 
-    <!-- Подключаем Puter.js -->
+    <div id="options">
+        <label>
+            <input type="checkbox" id="webSearchToggle"> Включить веб-поиск (для моделей OpenAI)
+        </label>
+        <label>
+            Модель:
+            <select id="modelSelect">
+                <option value="gpt-5.4-nano">GPT-5.4 Nano (быстрая)</option>
+                <option value="gpt-5.5">GPT-5.5 (умная)</option>
+                <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
+            </select>
+        </label>
+    </div>
+
+    <!-- 1. Подключаем библиотеку Puter.js -->
     <script src="https://js.puter.com/v2/"></script>
     <script>
         const chatDiv = document.getElementById('chat');
         const promptInput = document.getElementById('prompt');
         const sendBtn = document.getElementById('send');
+        const webSearchToggle = document.getElementById('webSearchToggle');
+        const modelSelect = document.getElementById('modelSelect');
 
-        function addMessage(text, role) {
+        function addMessage(text, role, isError = false) {
             const div = document.createElement('div');
-            div.className = `msg ${role}`;
+            div.className = `msg ${role}` + (isError ? ' error' : '');
             div.textContent = text;
             chatDiv.appendChild(div);
             chatDiv.scrollTop = chatDiv.scrollHeight;
+            return div;
         }
 
         async function askAI() {
@@ -47,12 +74,53 @@
             promptInput.value = '';
             sendBtn.disabled = true;
 
+            // Создаем "заглушку" для ответа, чтобы показать, что запрос обрабатывается
+            const aiMsgDiv = addMessage('Думаю...', 'ai');
+
             try {
-                // Вызов ИИ через Puter. При первом запуске откроется окно входа.
-                const response = await puter.ai.chat(prompt, { model: 'openai/gpt-5.4-nano' });
-                addMessage(response, 'ai');
+                // 2. Формируем опции для запроса
+                const options = {
+                    model: modelSelect.value,
+                };
+
+                // Если включен веб-поиск, добавляем инструмент (работает для моделей OpenAI)
+                if (webSearchToggle.checked) {
+                    // Проверяем, что выбрана модель OpenAI, так как инструмент специфичен
+                    if (modelSelect.value.startsWith('gpt')) {
+                        options.tools = [{ type: "web_search" }];
+                    } else {
+                        // Если выбрана не OpenAI модель, предупреждаем пользователя
+                        aiMsgDiv.textContent = '⚠️ Веб-поиск доступен только для моделей OpenAI (GPT). Попробуйте GPT-5.5.';
+                        // Можно либо прервать выполнение, либо продолжить без поиска. 
+                        // Здесь мы просто продолжим без поиска, но сообщим об этом.
+                    }
+                }
+
+                // 3. Вызов ИИ через Puter.js
+                // Используем puter.ai.chat, который поддерживает инструменты и разные модели
+                const response = await puter.ai.chat(prompt, options);
+                
+                // Ответ может быть строкой или объектом, в зависимости от модели и наличия инструментов
+                let responseText;
+                if (typeof response === 'string') {
+                    responseText = response;
+                } else if (response && response.message && response.message.content) {
+                    // Для некоторых моделей (например, Claude) ответ приходит в структурированном виде
+                    if (Array.isArray(response.message.content)) {
+                        responseText = response.message.content.map(c => c.text || '').join('');
+                    } else {
+                        responseText = response.message.content;
+                    }
+                } else {
+                    responseText = JSON.stringify(response);
+                }
+
+                aiMsgDiv.textContent = responseText;
+
             } catch (e) {
-                addMessage('Ошибка: ' + e.message, 'ai');
+                console.error(e);
+                aiMsgDiv.textContent = 'Ошибка: ' + (e.message || 'Не удалось получить ответ. Возможно, нужно авторизоваться в Puter (окно появится автоматически).');
+                aiMsgDiv.classList.add('error');
             } finally {
                 sendBtn.disabled = false;
                 promptInput.focus();
