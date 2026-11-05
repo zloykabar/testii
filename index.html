@@ -3,54 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой ИИ-Помощник с Puter.js</title>
+    <title>ИИ-Помощник с Поиском и Напоминалками</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f4f6f8; color: #1a1a1a; }
-        h2 { display: flex; align-items: center; gap: 0.5rem; }
-        #chat { background: white; border-radius: 12px; padding: 1.25rem; height: 450px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .msg { margin-bottom: 0.75rem; padding: 0.6rem 1rem; border-radius: 14px; max-width: 85%; line-height: 1.5; word-wrap: break-word; }
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; background: #f4f6f8; color: #1a1a1a; }
+        
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid #ddd; }
+        .tab-btn { padding: 0.75rem 1.5rem; border: none; background: none; font-size: 1rem; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; color: #666; font-weight: 500; }
+        .tab-btn.active { color: #007bff; border-bottom-color: #007bff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Чат */
+        #chat { background: white; border-radius: 12px; padding: 1.25rem; height: 400px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .msg { margin-bottom: 0.75rem; padding: 0.6rem 1rem; border-radius: 14px; max-width: 85%; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; }
         .user { background: #007bff; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
         .ai { background: #f0f2f5; color: #1a1a1a; border-bottom-left-radius: 4px; }
         .ai.error { background: #fee; color: #c00; }
-        #input-area { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
-        #prompt { flex: 1; padding: 0.75rem 1rem; border: 1px solid #ccc; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.2s; }
-        #prompt:focus { border-color: #007bff; }
+        
+        .input-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .input-row input[type="text"] { flex: 1; padding: 0.75rem 1rem; border: 1px solid #ccc; border-radius: 10px; font-size: 1rem; outline: none; }
+        .input-row input[type="text"]:focus { border-color: #007bff; }
         button { padding: 0.75rem 1.5rem; border: none; background: #007bff; color: white; border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background 0.2s; }
         button:hover:not(:disabled) { background: #0056b3; }
         button:disabled { background: #a0c4e8; cursor: not-allowed; }
-        #options { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: #555; }
-        #options label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+        
+        .options { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: #555; flex-wrap: wrap; }
+        .options label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+
+        /* Напоминалки */
+        .reminder-form { background: white; padding: 1.25rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #e0e0e0; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end; }
+        .reminder-form .field { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 120px; }
+        .reminder-form label { font-size: 0.8rem; color: #666; font-weight: 500; }
+        .reminder-form input { padding: 0.6rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        .reminder-form input:focus { border-color: #007bff; outline: none; }
+        .reminder-form button { height: 42px; white-space: nowrap; }
+        
+        #reminderList { list-style: none; padding: 0; }
+        #reminderList li { background: white; padding: 0.85rem 1rem; border-radius: 10px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e0e0e0; }
+        #reminderList li.done { opacity: 0.5; text-decoration: line-through; }
+        .reminder-info { display: flex; flex-direction: column; gap: 0.2rem; }
+        .reminder-time { font-size: 0.85rem; color: #007bff; font-weight: 600; }
+        .reminder-title { font-size: 1rem; }
+        .delete-btn { background: #dc3545; padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px; }
+        .delete-btn:hover { background: #a71d2a; }
+
+        .status { font-size: 0.85rem; color: #888; margin-top: 0.5rem; }
     </style>
 </head>
 <body>
     <h2>🤖 Мой ИИ-Помощник</h2>
-    
-    <div id="chat">
-        <div class="msg ai">Привет! Я твой ИИ-помощник. Спроси меня о чём угодно. Можешь включить веб-поиск, чтобы я мог найти актуальную информацию в интернете.</div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="chatTab">💬 Чат с ИИ</button>
+        <button class="tab-btn" data-tab="reminderTab">⏰ Напоминалки</button>
     </div>
 
-    <div id="input-area">
-        <input type="text" id="prompt" placeholder="Задайте вопрос..." autocomplete="off">
-        <button id="send" onclick="askAI()">Отправить</button>
+    <!-- ВКЛАДКА ЧАТ -->
+    <div id="chatTab" class="tab-content active">
+        <div id="chat">
+            <div class="msg ai">Привет! Я твой ИИ-помощник. Спроси меня о чём угодно. Включи «Веб-поиск», чтобы я мог найти погоду, новости или другие актуальные данные в интернете.</div>
+        </div>
+        <div class="input-row">
+            <input type="text" id="prompt" placeholder="Задайте вопрос (например: какая погода в Москве?)..." autocomplete="off">
+            <button id="send" onclick="askAI()">Отправить</button>
+        </div>
+        <div class="options">
+            <label>
+                <input type="checkbox" id="webSearchToggle" checked> 🔍 Включить веб-поиск (погода, новости)
+            </label>
+            <label>
+                Модель:
+                <select id="modelSelect">
+                    <option value="openai/gpt-5.5">GPT-5.5 (умная)</option>
+                    <option value="openai/gpt-5.4-nano">GPT-5.4 Nano (быстрая)</option>
+                    <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
+                </select>
+            </label>
+        </div>
     </div>
 
-    <div id="options">
-        <label>
-            <input type="checkbox" id="webSearchToggle"> Включить веб-поиск (для моделей OpenAI)
-        </label>
-        <label>
-            Модель:
-            <select id="modelSelect">
-                <option value="gpt-5.4-nano">GPT-5.4 Nano (быстрая)</option>
-                <option value="gpt-5.5">GPT-5.5 (умная)</option>
-                <option value="claude-sonnet-5-5">Claude Sonnet 5.5</option>
-            </select>
-        </label>
+    <!-- ВКЛАДКА НАПОМИНАЛОК -->
+    <div id="reminderTab" class="tab-content">
+        <div class="reminder-form">
+            <div class="field">
+                <label>Название</label>
+                <input type="text" id="remTitle" placeholder="Например: Позвонить маме">
+            </div>
+            <div class="field">
+                <label>Дата и время</label>
+                <input type="datetime-local" id="remTime">
+            </div>
+            <button onclick="addReminder()">➕ Добавить</button>
+        </div>
+        <ul id="reminderList"></ul>
+        <div class="status" id="reminderStatus">Напоминалки сохраняются в браузере и не пропадут после перезагрузки.</div>
     </div>
 
-    <!-- 1. Подключаем библиотеку Puter.js -->
+    <!-- 1. Подключаем Puter.js -->
     <script src="https://js.puter.com/v2/"></script>
     <script>
+        // ========== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ==========
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        // ========== ЧАТ С ИИ ==========
         const chatDiv = document.getElementById('chat');
         const promptInput = document.getElementById('prompt');
         const sendBtn = document.getElementById('send');
@@ -74,38 +137,22 @@
             promptInput.value = '';
             sendBtn.disabled = true;
 
-            // Создаем "заглушку" для ответа, чтобы показать, что запрос обрабатывается
             const aiMsgDiv = addMessage('Думаю...', 'ai');
 
             try {
-                // 2. Формируем опции для запроса
-                const options = {
-                    model: modelSelect.value,
-                };
+                const options = { model: modelSelect.value };
 
-                // Если включен веб-поиск, добавляем инструмент (работает для моделей OpenAI)
-                if (webSearchToggle.checked) {
-                    // Проверяем, что выбрана модель OpenAI, так как инструмент специфичен
-                    if (modelSelect.value.startsWith('gpt')) {
-                        options.tools = [{ type: "web_search" }];
-                    } else {
-                        // Если выбрана не OpenAI модель, предупреждаем пользователя
-                        aiMsgDiv.textContent = '⚠️ Веб-поиск доступен только для моделей OpenAI (GPT). Попробуйте GPT-5.5.';
-                        // Можно либо прервать выполнение, либо продолжить без поиска. 
-                        // Здесь мы просто продолжим без поиска, но сообщим об этом.
-                    }
+                // Если включен веб-поиск и модель OpenAI — добавляем инструмент
+                if (webSearchToggle.checked && modelSelect.value.startsWith('openai/')) {
+                    options.tools = [{ type: "web_search" }];
                 }
 
-                // 3. Вызов ИИ через Puter.js
-                // Используем puter.ai.chat, который поддерживает инструменты и разные модели
                 const response = await puter.ai.chat(prompt, options);
-                
-                // Ответ может быть строкой или объектом, в зависимости от модели и наличия инструментов
+
                 let responseText;
                 if (typeof response === 'string') {
                     responseText = response;
                 } else if (response && response.message && response.message.content) {
-                    // Для некоторых моделей (например, Claude) ответ приходит в структурированном виде
                     if (Array.isArray(response.message.content)) {
                         responseText = response.message.content.map(c => c.text || '').join('');
                     } else {
@@ -119,7 +166,7 @@
 
             } catch (e) {
                 console.error(e);
-                aiMsgDiv.textContent = 'Ошибка: ' + (e.message || 'Не удалось получить ответ. Возможно, нужно авторизоваться в Puter (окно появится автоматически).');
+                aiMsgDiv.textContent = 'Ошибка: ' + (e.message || 'Не удалось получить ответ. Возможно, нужно авторизоваться в Puter.');
                 aiMsgDiv.classList.add('error');
             } finally {
                 sendBtn.disabled = false;
@@ -130,6 +177,162 @@
         promptInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') askAI();
         });
+
+        // ========== НАПОМИНАЛКИ ==========
+        const STORAGE_KEY = 'my_ai_reminders';
+        const reminderListEl = document.getElementById('reminderList');
+        const remTitleInput = document.getElementById('remTitle');
+        const remTimeInput = document.getElementById('remTime');
+        const statusEl = document.getElementById('reminderStatus');
+
+        // Загрузка из localStorage
+        let reminders = [];
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            reminders = saved ? JSON.parse(saved) : [];
+        } catch (e) { reminders = []; }
+
+        // Сохранение в localStorage
+        function saveReminders() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(reminders));
+            } catch (e) {
+                console.error('Не удалось сохранить напоминалки:', e);
+            }
+        }
+
+        // Отрисовка списка
+        function renderReminders() {
+            reminderListEl.innerHTML = '';
+            if (reminders.length === 0) {
+                reminderListEl.innerHTML = '<li style="justify-content:center;color:#999;">Нет напоминалок</li>';
+                return;
+            }
+            // Сортируем по времени
+            reminders.sort((a, b) => new Date(a.time) - new Date(b.time));
+            reminders.forEach((rem, index) => {
+                const li = document.createElement('li');
+                if (rem.done) li.classList.add('done');
+                
+                const info = document.createElement('div');
+                info.className = 'reminder-info';
+                
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'reminder-time';
+                const d = new Date(rem.time);
+                timeSpan.textContent = d.toLocaleString('ru-RU', { 
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'reminder-title';
+                titleSpan.textContent = rem.title;
+                
+                info.appendChild(timeSpan);
+                info.appendChild(titleSpan);
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'delete-btn';
+                delBtn.textContent = 'Удалить';
+                delBtn.onclick = () => {
+                    reminders.splice(index, 1);
+                    saveReminders();
+                    renderReminders();
+                };
+                
+                li.appendChild(info);
+                li.appendChild(delBtn);
+                reminderListEl.appendChild(li);
+            });
+        }
+
+        // Добавление напоминалки
+        function addReminder() {
+            const title = remTitleInput.value.trim();
+            const time = remTimeInput.value;
+            if (!title || !time) {
+                alert('Заполните название и время');
+                return;
+            }
+            const timestamp = new Date(time).getTime();
+            if (timestamp < Date.now()) {
+                alert('Время уже прошло. Выберите будущее время.');
+                return;
+            }
+            reminders.push({ title, time, done: false, notified: false });
+            saveReminders();
+            renderReminders();
+            remTitleInput.value = '';
+            remTimeInput.value = '';
+        }
+
+        // ========== ПРОВЕРКА НАПОМИНАЛОК И СИГНАЛ ==========
+        // Звуковой сигнал через Web Audio API (не требует mp3)
+        let audioCtx = null;
+        function getAudioCtx() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+
+        function playBeep() {
+            try {
+                const ctx = getAudioCtx();
+                const now = ctx.currentTime;
+                // Три восходящих тона (C5, E5, G5) — приятный «дзынь»
+                [523.25, 659.25, 783.99].forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.15);
+                    gain.gain.setValueAtTime(0.0001, now + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.3, now + i * 0.15 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.15 + 0.3);
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.35);
+                });
+            } catch (e) { console.warn('Звук не сработал:', e); }
+        }
+
+        // Функция проверки (вызывается каждую секунду)
+        function checkReminders() {
+            const now = Date.now();
+            let changed = false;
+            reminders.forEach(rem => {
+                if (!rem.notified && !rem.done && new Date(rem.time).getTime() <= now) {
+                    rem.notified = true;
+                    changed = true;
+                    playBeep();
+                    // Показываем уведомление в браузере (если разрешено)
+                    if (Notification.permission === 'granted') {
+                        new Notification('⏰ Напоминание', { body: rem.title });
+                    } else if (Notification.permission !== 'denied') {
+                        Notification.requestPermission();
+                    }
+                    // Помечаем выполненным
+                    rem.done = true;
+                }
+            });
+            if (changed) {
+                saveReminders();
+                renderReminders();
+            }
+        }
+
+        // Запускаем интервал
+        setInterval(checkReminders, 1000);
+
+        // При первом клике в любом месте — «разблокируем» AudioContext (политика браузеров)
+        document.addEventListener('click', () => { getAudioCtx(); }, { once: true });
+
+        // Инициализация
+        renderReminders();
+        // Запрос разрешения на уведомления (опционально)
+        if ('Notification' in window && Notification.permission === 'default') {
+            // Можно запросить позже, по кнопке, но здесь не навязываем
+        }
     </script>
 </body>
 </html>
