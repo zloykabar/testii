@@ -19,6 +19,24 @@
 
         h2 { display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0 1rem; font-size: 1.4rem; }
 
+        /* Баннер разблокировки звука */
+        #unlockBanner {
+            display: none;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            user-select: none;
+        }
+        #unlockBanner.show { display: block; }
+        #unlockBanner:active { background: #ffe69c; }
+
         /* Форма */
         .reminder-form {
             background: white;
@@ -37,16 +55,25 @@
             padding: 0.85rem;
             border: 1px solid #ccc;
             border-radius: 10px;
-            font-size: 16px; /* 16px предотвращает зум на iOS при фокусе */
+            font-size: 16px;
             background: white;
             width: 100%;
             font-family: inherit;
             color: #1a1a1a;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .reminder-form select {
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.9rem center;
+            background-size: 0.8rem;
+            padding-right: 2.5rem;
         }
         .reminder-form input:focus,
         .reminder-form select:focus { border-color: #007bff; outline: none; }
         .reminder-form button {
-            padding: 0.9rem 1.5rem;
+            padding: 0.95rem 1.5rem;
             border: none;
             background: #007bff;
             color: white;
@@ -113,7 +140,7 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
         #alertBox h3 { margin-top: 0; color: #dc3545; font-size: 1.3rem; }
-        #alertBox p { font-size: 1.15rem; margin: 1rem 0; line-height: 1.4; }
+        #alertBox p { font-size: 1.15rem; margin: 1rem 0; line-height: 1.4; word-wrap: break-word; }
         #alertBox button {
             background: #28a745;
             font-size: 1.1rem;
@@ -123,24 +150,9 @@
             border-radius: 10px;
             cursor: pointer;
             width: 100%;
+            font-weight: 600;
         }
         #alertBox button:active { background: #218838; }
-
-        /* Баннер разблокировки звука */
-        #unlockBanner {
-            display: none;
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 0.75rem 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-            cursor: pointer;
-            text-align: center;
-            font-weight: 500;
-        }
-        #unlockBanner.show { display: block; }
 
         /* На больших экранах — форма в строку */
         @media (min-width: 600px) {
@@ -154,12 +166,10 @@
 <body>
     <h2>⏰ Напоминалки</h2>
 
-    <!-- Баннер разблокировки звука (показывается, пока не было касания) -->
     <div id="unlockBanner" onclick="unlockAudio()">
         🔊 Нажмите здесь, чтобы включить звук
     </div>
 
-    <!-- Форма добавления -->
     <div class="reminder-form">
         <div class="field">
             <label>Название (будет озвучено)</label>
@@ -184,11 +194,9 @@
         <button onclick="addReminder()">➕ Добавить</button>
     </div>
 
-    <!-- Список напоминалок -->
     <ul id="reminderList"></ul>
     <div class="status" id="reminderStatus">Напоминалки сохраняются в браузере. При срабатывании название будет озвучено и повторено, пока вы не нажмёте «Ок».</div>
 
-    <!-- Всплывающее окно -->
     <div id="alertOverlay">
         <div id="alertBox">
             <h3>⏰ Напоминание</h3>
@@ -198,52 +206,86 @@
     </div>
 
     <script>
-        // ========== РАЗБЛОКИРОВКА ОЗВУЧКИ НА МОБИЛЬНЫХ ==========
-        // На iOS/Android speechSynthesis не работает без предварительного действия пользователя.
-        // Показываем баннер и ждём первого касания/клика.
+        // ========== РАЗБЛОКИРОВКА ОЗВУЧКИ ==========
         let audioUnlocked = false;
+        let voicesReady = false;
+        let cachedVoices = [];
+
+        // Загружаем список голосов (на мобильных это происходит асинхронно)
+        function loadVoices() {
+            if (!('speechSynthesis' in window)) return;
+            const v = window.speechSynthesis.getVoices();
+            if (v.length > 0) {
+                cachedVoices = v;
+                voicesReady = true;
+                console.log('Голоса загружены:', v.length);
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            loadVoices();
+            if ('onvoiceschanged' in window.speechSynthesis) {
+                window.speechSynthesis.onvoiceschanged = loadVoices;
+            }
+            // На некоторых мобильных onvoiceschanged не срабатывает — пробуем периодически
+            let voiceAttempts = 0;
+            const voiceTimer = setInterval(() => {
+                if (voicesReady || voiceAttempts > 20) {
+                    clearInterval(voiceTimer);
+                    return;
+                }
+                loadVoices();
+                voiceAttempts++;
+            }, 250);
+        }
 
         function unlockAudio() {
             if (audioUnlocked) return;
             if (!('speechSynthesis' in window)) {
-                document.getElementById('unlockBanner').textContent = '⚠️ Браузер не поддерживает озвучку';
+                const banner = document.getElementById('unlockBanner');
+                banner.textContent = '⚠️ Браузер не поддерживает озвучку';
+                banner.style.background = '#f8d7da';
+                banner.style.borderColor = '#f5c2c7';
+                banner.style.color = '#842029';
                 return;
             }
-            // "Пустая" фраза для активации синтезатора
             try {
-                const u = new SpeechSynthesisUtterance('');
+                // «Пустая» фраза для активации синтезатора
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(' ');
                 u.volume = 0;
                 u.lang = 'ru-RU';
+                u.rate = 1;
                 window.speechSynthesis.speak(u);
                 audioUnlocked = true;
                 document.getElementById('unlockBanner').classList.remove('show');
                 console.log('Озвучка разблокирована');
+                // После разблокировки ещё раз обновим голоса
+                setTimeout(loadVoices, 300);
             } catch (e) {
                 console.warn('Не удалось разблокировать:', e);
             }
         }
 
-        // Показываем баннер при загрузке, если ещё не разблокировано
         window.addEventListener('DOMContentLoaded', () => {
             const banner = document.getElementById('unlockBanner');
-            if ('speechSynthesis' in window) {
-                banner.classList.add('show');
-            } else {
+            if (!('speechSynthesis' in window)) {
                 banner.textContent = '⚠️ Браузер не поддерживает озвучку';
                 banner.classList.add('show');
                 banner.style.background = '#f8d7da';
                 banner.style.borderColor = '#f5c2c7';
                 banner.style.color = '#842029';
+                return;
             }
+            banner.classList.add('show');
 
-            // Любое касание/клик в любом месте страницы тоже разблокирует
             const autoUnlock = () => { unlockAudio(); };
             document.addEventListener('touchstart', autoUnlock, { once: true, passive: true });
             document.addEventListener('click', autoUnlock, { once: true });
         });
 
         // ========== НАПОМИНАЛКИ ==========
-        const STORAGE_KEY = 'my_reminders_v5';
+        const STORAGE_KEY = 'my_reminders_v6';
         const reminderListEl = document.getElementById('reminderList');
         const remTitleInput = document.getElementById('remTitle');
         const remTimeInput = document.getElementById('remTime');
@@ -374,31 +416,62 @@
             remTitleInput.value = '';
             remTimeInput.value = '';
             statusEl.textContent = 'Напоминалка добавлена.';
-            unlockAudio(); // на всякий случай ещё раз
+            unlockAudio();
         }
 
-        // ========== ОЗВУЧКА ==========
+        // ========== ОЗВУЧКА С ОЖИДАНИЕМ ГОЛОСОВ ==========
         function speakText(text, onEndCallback) {
             if (!('speechSynthesis' in window)) {
                 if (onEndCallback) onEndCallback();
                 return;
             }
-            try {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ru-RU';
-                utterance.rate = 0.9;
-                utterance.pitch = 1;
-                utterance.volume = 1;
-                utterance.onend = () => { if (onEndCallback) onEndCallback(); };
-                utterance.onerror = (e) => {
-                    console.warn('Ошибка озвучки:', e);
+
+            function doSpeak() {
+                try {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'ru-RU';
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1;
+                    utterance.volume = 1;
+
+                    // Явно выбираем русский голос, если доступен
+                    if (cachedVoices.length > 0) {
+                        const ruVoice = cachedVoices.find(v => v.lang && v.lang.toLowerCase().startsWith('ru'));
+                        if (ruVoice) utterance.voice = ruVoice;
+                    }
+
+                    utterance.onend = () => { if (onEndCallback) onEndCallback(); };
+                    utterance.onerror = (e) => {
+                        console.warn('Ошибка озвучки:', e);
+                        if (onEndCallback) onEndCallback();
+                    };
+                    window.speechSynthesis.speak(utterance);
+                } catch (e) {
+                    console.warn('speakText error:', e);
                     if (onEndCallback) onEndCallback();
+                }
+            }
+
+            // Если голоса ещё не загрузились — ждём до 3 секунд
+            if (!voicesReady && cachedVoices.length === 0) {
+                let attempts = 0;
+                const maxAttempts = 12;
+                const trySpeak = () => {
+                    loadVoices();
+                    if (cachedVoices.length > 0 || voicesReady) {
+                        doSpeak();
+                    } else if (attempts < maxAttempts) {
+                        attempts++;
+                        setTimeout(trySpeak, 250);
+                    } else {
+                        console.log('Голоса не загрузились, пробуем без них');
+                        doSpeak();
+                    }
                 };
-                window.speechSynthesis.speak(utterance);
-            } catch (e) {
-                console.warn('speakText error:', e);
-                if (onEndCallback) onEndCallback();
+                trySpeak();
+            } else {
+                doSpeak();
             }
         }
 
@@ -419,7 +492,6 @@
             alertText.textContent = reminder.title;
             alertOverlay.style.display = 'flex';
 
-            // На случай, если ещё не разблокировано
             if (!audioUnlocked) unlockAudio();
 
             function speakAndSchedule() {
