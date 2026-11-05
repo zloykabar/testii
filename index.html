@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой ИИ-Помощник</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f0f2f5; }
+        #chat { background: white; border-radius: 8px; padding: 1rem; height: 400px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid #ddd; }
+        .msg { margin-bottom: 0.75rem; padding: 0.5rem 1rem; border-radius: 12px; max-width: 80%; }
+        .user { background: #007bff; color: white; margin-left: auto; }
+        .ai { background: #e9ecef; color: black; }
+        #input-area { display: flex; gap: 0.5rem; }
+        #prompt { flex: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        button { padding: 0.75rem 1.5rem; border: none; background: #007bff; color: white; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+        button:disabled { background: #6c757d; }
+    </style>
+</head>
+<body>
+    <h2>🤖 Мой ИИ-Помощник</h2>
+    <div id="chat"></div>
+    <div id="input-area">
+        <input type="text" id="prompt" placeholder="Задайте вопрос..." autocomplete="off">
+        <button id="send" onclick="askAI()">Отправить</button>
+    </div>
+
+    <!-- Подключаем Puter.js -->
+    <script src="https://js.puter.com/v2/"></script>
+    <script>
+        const chatDiv = document.getElementById('chat');
+        const promptInput = document.getElementById('prompt');
+        const sendBtn = document.getElementById('send');
+
+        function addMessage(text, role) {
+            const div = document.createElement('div');
+            div.className = `msg ${role}`;
+            div.textContent = text;
+            chatDiv.appendChild(div);
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+
+        async function askAI() {
+            const prompt = promptInput.value.trim();
+            if (!prompt) return;
+
+            addMessage(prompt, 'user');
+            promptInput.value = '';
+            sendBtn.disabled = true;
+
+            try {
+                // Вызов ИИ через Puter. При первом запуске откроется окно входа.
+                const response = await puter.ai.chat(prompt, { model: 'openai/gpt-5.4-nano' });
+                addMessage(response, 'ai');
+            } catch (e) {
+                addMessage('Ошибка: ' + e.message, 'ai');
+            } finally {
+                sendBtn.disabled = false;
+                promptInput.focus();
+            }
+        }
+
+        promptInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') askAI();
+        });
+    </script>
+</body>
+</html>
