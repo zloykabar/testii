@@ -3,42 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ИИ-Помощник с Поиском и Напоминалками (Голос)</title>
+    <title>Напоминалки с голосовой озвучкой</title>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; background: #f4f6f8; color: #1a1a1a; }
-        
-        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid #ddd; }
-        .tab-btn { padding: 0.75rem 1.5rem; border: none; background: none; font-size: 1rem; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; color: #666; font-weight: 500; }
-        .tab-btn.active { color: #007bff; border-bottom-color: #007bff; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f4f6f8; color: #1a1a1a; }
 
-        /* Чат */
-        #chat { background: white; border-radius: 12px; padding: 1.25rem; height: 400px; overflow-y: auto; margin-bottom: 1rem; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .msg { margin-bottom: 0.75rem; padding: 0.6rem 1rem; border-radius: 14px; max-width: 85%; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; }
-        .user { background: #007bff; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
-        .ai { background: #f0f2f5; color: #1a1a1a; border-bottom-left-radius: 4px; }
-        .ai.error { background: #fee; color: #c00; }
-        
-        .input-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
-        .input-row input[type="text"] { flex: 1; padding: 0.75rem 1rem; border: 1px solid #ccc; border-radius: 10px; font-size: 1rem; outline: none; }
-        .input-row input[type="text"]:focus { border-color: #007bff; }
-        button { padding: 0.75rem 1.5rem; border: none; background: #007bff; color: white; border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background 0.2s; }
-        button:hover:not(:disabled) { background: #0056b3; }
-        button:disabled { background: #a0c4e8; cursor: not-allowed; }
-        
-        .options { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; color: #555; flex-wrap: wrap; }
-        .options label { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+        h2 { display: flex; align-items: center; gap: 0.5rem; }
 
-        /* Напоминалки */
+        /* Форма */
         .reminder-form { background: white; padding: 1.25rem; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #e0e0e0; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end; }
         .reminder-form .field { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 140px; }
         .reminder-form label { font-size: 0.8rem; color: #666; font-weight: 500; }
         .reminder-form input, .reminder-form select { padding: 0.6rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; background: white; }
         .reminder-form input:focus, .reminder-form select:focus { border-color: #007bff; outline: none; }
-        .reminder-form button { height: 42px; white-space: nowrap; }
-        
+        .reminder-form button { height: 42px; white-space: nowrap; padding: 0.75rem 1.5rem; border: none; background: #007bff; color: white; border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: background 0.2s; }
+        .reminder-form button:hover { background: #0056b3; }
+
+        /* Список */
         #reminderList { list-style: none; padding: 0; }
         #reminderList li { background: white; padding: 0.85rem 1rem; border-radius: 10px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e0e0e0; }
         #reminderList li.done { opacity: 0.5; text-decoration: line-through; }
@@ -46,7 +27,7 @@
         .reminder-time { font-size: 0.85rem; color: #007bff; font-weight: 600; }
         .reminder-title { font-size: 1rem; }
         .reminder-repeat { font-size: 0.8rem; color: #888; }
-        .delete-btn { background: #dc3545; padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px; }
+        .delete-btn { background: #dc3545; padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px; border: none; color: white; cursor: pointer; }
         .delete-btn:hover { background: #a71d2a; }
 
         .status { font-size: 0.85rem; color: #888; margin-top: 0.5rem; }
@@ -56,71 +37,43 @@
         #alertBox { background: white; padding: 2rem; border-radius: 16px; text-align: center; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
         #alertBox h3 { margin-top: 0; color: #dc3545; }
         #alertBox p { font-size: 1.2rem; margin: 1rem 0; }
-        #alertBox button { background: #28a745; font-size: 1.1rem; padding: 1rem 2rem; }
+        #alertBox button { background: #28a745; font-size: 1.1rem; padding: 1rem 2rem; border: none; color: white; border-radius: 10px; cursor: pointer; }
         #alertBox button:hover { background: #218838; }
     </style>
 </head>
 <body>
-    <h2>🤖 Мой ИИ-Помощник</h2>
+    <h2>⏰ Напоминалки</h2>
 
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="chatTab">💬 Чат с ИИ</button>
-        <button class="tab-btn" data-tab="reminderTab">⏰ Напоминалки</button>
+    <!-- Форма добавления -->
+    <div class="reminder-form">
+        <div class="field">
+            <label>Название (будет озвучено)</label>
+            <input type="text" id="remTitle" placeholder="Например: Выпей таблетку фурацилина">
+        </div>
+        <div class="field">
+            <label>Дата и время</label>
+            <input type="datetime-local" id="remTime">
+        </div>
+        <div class="field">
+            <label>Повторять сигнал</label>
+            <select id="remRepeat">
+                <option value="once">Один раз</option>
+                <option value="minute">Каждую минуту</option>
+                <option value="hour">Каждый час</option>
+                <option value="day">Каждый день</option>
+                <option value="week">Каждую неделю</option>
+                <option value="month">Каждый месяц</option>
+                <option value="year">Каждый год</option>
+            </select>
+        </div>
+        <button onclick="addReminder()">➕ Добавить</button>
     </div>
 
-    <!-- ВКЛАДКА ЧАТ -->
-    <div id="chatTab" class="tab-content active">
-        <div id="chat">
-            <div class="msg ai">Привет! Я твой ИИ-помощник. Спроси меня о чём угодно. Включи «Веб-поиск», чтобы я мог найти погоду, новости или другие актуальные данные в интернете.</div>
-        </div>
-        <div class="input-row">
-            <input type="text" id="prompt" placeholder="Задайте вопрос (например: какая погода в Москве?)..." autocomplete="off">
-            <button id="send" onclick="askAI()">Отправить</button>
-        </div>
-        <div class="options">
-            <label>
-                <input type="checkbox" id="webSearchToggle" checked> 🔍 Включить веб-поиск (погода, новости)
-            </label>
-            <label>
-                Модель:
-                <select id="modelSelect">
-                    <option value="openai/gpt-5.3-chat">GPT-5.3 Chat (с веб-поиском)</option>
-                    <option value="openai/gpt-5.6-luna">GPT-5.6 Luna (быстрая)</option>
-                </select>
-            </label>
-        </div>
-    </div>
+    <!-- Список напоминалок -->
+    <ul id="reminderList"></ul>
+    <div class="status" id="reminderStatus">Напоминалки сохраняются в браузере. При срабатывании название будет озвучено и повторено, пока вы не нажмёте «Ок».</div>
 
-    <!-- ВКЛАДКА НАПОМИНАЛОК -->
-    <div id="reminderTab" class="tab-content">
-        <div class="reminder-form">
-            <div class="field">
-                <label>Название (будет озвучено)</label>
-                <input type="text" id="remTitle" placeholder="Например: Выпей таблетку фурацилина">
-            </div>
-            <div class="field">
-                <label>Дата и время</label>
-                <input type="datetime-local" id="remTime">
-            </div>
-            <div class="field">
-                <label>Повторять сигнал</label>
-                <select id="remRepeat">
-                    <option value="once">Один раз</option>
-                    <option value="minute">Каждую минуту</option>
-                    <option value="hour">Каждый час</option>
-                    <option value="day">Каждый день</option>
-                    <option value="week">Каждую неделю</option>
-                    <option value="month">Каждый месяц</option>
-                    <option value="year">Каждый год</option>
-                </select>
-            </div>
-            <button onclick="addReminder()">➕ Добавить</button>
-        </div>
-        <ul id="reminderList"></ul>
-        <div class="status" id="reminderStatus">Напоминалки сохраняются в браузере. При срабатывании название будет озвучено.</div>
-    </div>
-
-    <!-- Всплывающее окно для остановки сигнала -->
+    <!-- Всплывающее окно -->
     <div id="alertOverlay">
         <div id="alertBox">
             <h3>⏰ Напоминание</h3>
@@ -129,91 +82,9 @@
         </div>
     </div>
 
-    <!-- Подключаем Puter.js -->
-    <script src="https://js.puter.com/v2/"></script>
     <script>
-        // ========== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ==========
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById(btn.dataset.tab).classList.add('active');
-            });
-        });
-
-        // ========== ЧАТ С ИИ ==========
-        const chatDiv = document.getElementById('chat');
-        const promptInput = document.getElementById('prompt');
-        const sendBtn = document.getElementById('send');
-        const webSearchToggle = document.getElementById('webSearchToggle');
-        const modelSelect = document.getElementById('modelSelect');
-
-        function addMessage(text, role, isError = false) {
-            const div = document.createElement('div');
-            div.className = `msg ${role}` + (isError ? ' error' : '');
-            div.textContent = text;
-            chatDiv.appendChild(div);
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-            return div;
-        }
-
-        async function askAI() {
-            const prompt = promptInput.value.trim();
-            if (!prompt) return;
-
-            // Проверка: загрузилась ли библиотека Puter
-            if (typeof puter === 'undefined') {
-                addMessage('Библиотека ИИ ещё загружается. Подождите пару секунд и попробуйте снова.', 'ai', true);
-                return;
-            }
-
-            addMessage(prompt, 'user');
-            promptInput.value = '';
-            sendBtn.disabled = true;
-
-            const aiMsgDiv = addMessage('Думаю...', 'ai');
-
-            try {
-                const options = { model: modelSelect.value };
-
-                if (webSearchToggle.checked && modelSelect.value.startsWith('openai/')) {
-                    options.tools = [{ type: "web_search" }];
-                }
-
-                const response = await puter.ai.chat(prompt, options);
-
-                let responseText;
-                if (typeof response === 'string') {
-                    responseText = response;
-                } else if (response && response.message && response.message.content) {
-                    if (Array.isArray(response.message.content)) {
-                        responseText = response.message.content.map(c => c.text || '').join('');
-                    } else {
-                        responseText = response.message.content;
-                    }
-                } else {
-                    responseText = JSON.stringify(response);
-                }
-
-                aiMsgDiv.textContent = responseText;
-
-            } catch (e) {
-                console.error(e);
-                aiMsgDiv.textContent = 'Ошибка: ' + (e.message || 'Не удалось получить ответ.');
-                aiMsgDiv.classList.add('error');
-            } finally {
-                sendBtn.disabled = false;
-                promptInput.focus();
-            }
-        }
-
-        promptInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') askAI();
-        });
-
         // ========== НАПОМИНАЛКИ С ОЗВУЧКОЙ ==========
-        const STORAGE_KEY = 'my_ai_reminders_v3';
+        const STORAGE_KEY = 'my_reminders_v4';
         const reminderListEl = document.getElementById('reminderList');
         const remTitleInput = document.getElementById('remTitle');
         const remTimeInput = document.getElementById('remTime');
@@ -222,12 +93,12 @@
         const alertOverlay = document.getElementById('alertOverlay');
         const alertText = document.getElementById('alertText');
 
-        // Переменные для управления озвучкой
+        // Управление озвучкой
         let currentAlertReminder = null;
-        let repeatIntervalId = null;
         let isSpeakingLoop = false;
+        let repeatTimerId = null;
 
-        // Загрузка
+        // Загрузка из localStorage
         let reminders = [];
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -247,7 +118,6 @@
             }
         }
 
-        // Форматирование текста повтора
         function getRepeatLabel(value) {
             const labels = {
                 once: 'Один раз',
@@ -261,7 +131,7 @@
             return labels[value] || value;
         }
 
-        // Отрисовка
+        // Отрисовка списка
         function renderReminders() {
             reminderListEl.innerHTML = '';
             if (reminders.length === 0) {
@@ -272,16 +142,16 @@
             reminders.forEach((rem) => {
                 const li = document.createElement('li');
                 if (rem.done) li.classList.add('done');
-                
+
                 const info = document.createElement('div');
                 info.className = 'reminder-info';
-                
+
                 const timeSpan = document.createElement('span');
                 timeSpan.className = 'reminder-time';
                 try {
                     const d = new Date(rem.time);
                     if (!isNaN(d.getTime())) {
-                        timeSpan.textContent = d.toLocaleString('ru-RU', { 
+                        timeSpan.textContent = d.toLocaleString('ru-RU', {
                             day: '2-digit', month: '2-digit', year: 'numeric',
                             hour: '2-digit', minute: '2-digit'
                         });
@@ -289,19 +159,19 @@
                         timeSpan.textContent = 'Некорректное время';
                     }
                 } catch (e) { timeSpan.textContent = 'Ошибка времени'; }
-                
+
                 const titleSpan = document.createElement('span');
                 titleSpan.className = 'reminder-title';
                 titleSpan.textContent = rem.title;
-                
+
                 const repeatSpan = document.createElement('span');
                 repeatSpan.className = 'reminder-repeat';
                 repeatSpan.textContent = '🔄 ' + getRepeatLabel(rem.repeat || 'once');
-                
+
                 info.appendChild(timeSpan);
                 info.appendChild(titleSpan);
                 info.appendChild(repeatSpan);
-                
+
                 const delBtn = document.createElement('button');
                 delBtn.className = 'delete-btn';
                 delBtn.textContent = 'Удалить';
@@ -313,19 +183,19 @@
                         renderReminders();
                     }
                 };
-                
+
                 li.appendChild(info);
                 li.appendChild(delBtn);
                 reminderListEl.appendChild(li);
             });
         }
 
-        // Добавление
+        // Добавление напоминалки
         function addReminder() {
             const title = remTitleInput.value.trim();
             const timeValue = remTimeInput.value;
             const repeat = remRepeatSelect.value;
-            
+
             if (!title) { alert('Введите название'); return; }
             if (!timeValue) { alert('Выберите время'); return; }
 
@@ -336,11 +206,11 @@
                 return;
             }
 
-            reminders.push({ 
-                title, 
+            reminders.push({
+                title,
                 time: timeValue,
                 repeat: repeat,
-                done: false, 
+                done: false,
                 notified: false,
                 lastTriggered: null
             });
@@ -351,14 +221,14 @@
             statusEl.textContent = 'Напоминалка добавлена.';
         }
 
-        // ========== ОЗВУЧКА (Web Speech API) ==========
+        // ========== ОЗВУЧКА ==========
         function speakText(text, onEndCallback) {
             if (!('speechSynthesis' in window)) {
                 console.warn('Браузер не поддерживает озвучку');
                 if (onEndCallback) onEndCallback();
                 return;
             }
-            window.speechSynthesis.cancel(); // остановить предыдущее
+            window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'ru-RU';
             utterance.rate = 0.9;
@@ -369,12 +239,12 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // Остановить всё
+        // Остановить сигнал
         function stopAlert() {
             window.speechSynthesis.cancel();
-            if (repeatIntervalId) {
-                clearInterval(repeatIntervalId);
-                repeatIntervalId = null;
+            if (repeatTimerId) {
+                clearTimeout(repeatTimerId);
+                repeatTimerId = null;
             }
             isSpeakingLoop = false;
             alertOverlay.style.display = 'none';
@@ -383,20 +253,17 @@
 
         // Показать окно и начать озвучку с повтором
         function triggerAlert(reminder) {
-            if (currentAlertReminder) return; // уже показываем другое
+            if (currentAlertReminder) return;
             currentAlertReminder = reminder;
             alertText.textContent = reminder.title;
             alertOverlay.style.display = 'flex';
-            
-            // Функция, которая произносит текст и планирует следующий повтор
+
             function speakAndSchedule() {
-                if (!currentAlertReminder) return; // остановлено
+                if (!currentAlertReminder) return;
                 isSpeakingLoop = true;
                 speakText(reminder.title, () => {
-                    // После окончания речи, если всё ещё активно, повторяем
                     if (currentAlertReminder && isSpeakingLoop) {
-                        // Небольшая пауза перед повтором, чтобы не было каши
-                        setTimeout(() => {
+                        repeatTimerId = setTimeout(() => {
                             if (currentAlertReminder && isSpeakingLoop) {
                                 speakAndSchedule();
                             }
@@ -404,28 +271,26 @@
                     }
                 });
             }
-            
-            // Начинаем озвучку сразу
+
             speakAndSchedule();
         }
 
         // ========== ПРОВЕРКА НАПОМИНАЛОК ==========
         function checkReminders() {
-            if (currentAlertReminder) return; // уже показываем, не прерываем
-            
+            if (currentAlertReminder) return;
+
             const now = Date.now();
             let changed = false;
-            
+
             for (let i = 0; i < reminders.length; i++) {
                 const rem = reminders[i];
                 if (rem.done) continue;
-                
+
                 const remTime = new Date(rem.time).getTime();
                 if (isNaN(remTime)) continue;
-                
-                // Условие срабатывания
+
                 let shouldTrigger = false;
-                
+
                 if (rem.repeat === 'once') {
                     if (!rem.notified && remTime <= now) {
                         shouldTrigger = true;
@@ -433,11 +298,7 @@
                         rem.notified = true;
                     }
                 } else {
-                    // Для повторяющихся: проверяем, прошло ли время первого срабатывания
-                    // и не срабатывало ли уже в текущем периоде
                     if (remTime <= now) {
-                        // Если ещё ни разу не срабатывало (lastTriggered null) — срабатываем
-                        // Или если с последнего срабатывания прошёл период
                         if (!rem.lastTriggered) {
                             shouldTrigger = true;
                         } else {
@@ -448,26 +309,24 @@
                         }
                     }
                 }
-                
+
                 if (shouldTrigger) {
                     rem.lastTriggered = now;
-                    // Для "один раз" ставим done, для повторяющихся не ставим
                     if (rem.repeat === 'once') {
                         rem.done = true;
                     }
                     changed = true;
                     triggerAlert(rem);
-                    break; // показываем только одно за раз
+                    break;
                 }
             }
-            
+
             if (changed) {
                 saveReminders();
                 renderReminders();
             }
         }
 
-        // Период в миллисекундах для повторяющихся
         function getPeriodMs(repeat) {
             const periods = {
                 minute: 60 * 1000,
@@ -480,10 +339,7 @@
             return periods[repeat] || null;
         }
 
-        // Запуск проверки каждую секунду
         setInterval(checkReminders, 1000);
-
-        // Инициализация
         renderReminders();
     </script>
 </body>
